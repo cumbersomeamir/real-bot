@@ -1,0 +1,463 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("MONGODB_URI")
+}
+
+model User {
+  id             String         @id @default(uuid()) @map("_id")
+  email          String         @unique
+  phone          String?
+  name           String
+  password       String
+  role           UserRole       @default(BROKER)
+  avatar         String?
+  isActive       Boolean        @default(true)
+  lastLogin      DateTime?
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  assignedLeads  Lead[]         @relation("BrokerLeads")
+  createdLeads   Lead[]         @relation("CreatedByUser")
+  activities     Activity[]
+  notifications  Notification[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+enum UserRole {
+  OWNER
+  SALES_DIRECTOR
+  SALES_MANAGER
+  CHANNEL_PARTNER_MANAGER
+  BROKER
+}
+
+model Organization {
+  id            String           @id @default(uuid()) @map("_id")
+  name          String
+  domain        String?
+  logo          String?
+  plan          PlanType         @default(STARTER)
+  planExpiresAt DateTime?
+  users         User[]
+  projects      Project[]
+  leads         Lead[]
+  rules         AutomationRule[]
+  apiKeys       ApiKey[]
+  settings      Json?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+enum PlanType {
+  STARTER
+  GROWTH
+  ENTERPRISE
+}
+
+model Project {
+  id             String        @id @default(uuid()) @map("_id")
+  name           String
+  location       String
+  city           String
+  type           PropertyType
+  status         ProjectStatus @default(ACTIVE)
+  description    String?
+  totalUnits     Int
+  availableUnits Int
+  priceRange     Json
+  configurations Json
+  amenities      String[]
+  brochureUrl    String?
+  locationMapUrl String?
+  images         String[]
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  leads          Lead[]
+  inventory      Inventory[]
+  campaigns      Campaign[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+enum PropertyType {
+  RESIDENTIAL
+  COMMERCIAL
+  PLOTTED
+  VILLA
+  MIXED
+}
+
+enum ProjectStatus {
+  ACTIVE
+  UPCOMING
+  SOLD_OUT
+  ARCHIVED
+}
+
+model Inventory {
+  id         String          @id @default(uuid()) @map("_id")
+  unitNumber String
+  floor      Int?
+  type       String
+  area       Float
+  price      Float
+  status     InventoryStatus @default(AVAILABLE)
+  projectId  String
+  project    Project         @relation(fields: [projectId], references: [id])
+  leadId     String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+}
+
+enum InventoryStatus {
+  AVAILABLE
+  HOLD
+  BOOKED
+  SOLD
+}
+
+model Lead {
+  id               String       @id @default(uuid()) @map("_id")
+  name             String
+  phone            String
+  email            String?
+  alternatePhone   String?
+  city             String?
+  area             String?
+  geoLocation      Json?
+  source           LeadSource
+  sourceDetail     String?
+  campaignId       String?
+  campaign         Campaign?    @relation(fields: [campaignId], references: [id])
+  utmSource        String?
+  utmMedium        String?
+  utmCampaign      String?
+  utmContent       String?
+  utmTerm          String?
+  status           LeadStatus   @default(NEW)
+  score            Int          @default(0)
+  scoreBreakdown   Json?
+  budgetRange      Json?
+  timeline         String?
+  configuration    String?
+  financingStatus  String?
+  locationPref     String?
+  isQualified      Boolean      @default(false)
+  qualifiedAt      DateTime?
+  assignedBrokerId String?
+  assignedBroker   User?        @relation("BrokerLeads", fields: [assignedBrokerId], references: [id])
+  projectId        String?
+  project          Project?     @relation(fields: [projectId], references: [id])
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id])
+  isDuplicate      Boolean      @default(false)
+  duplicateOfId    String?
+  isReactivated    Boolean      @default(false)
+  reactivatedFrom  String?
+  communications   Communication[]
+  activities       Activity[]
+  followUps        FollowUp[]
+  siteVisits       SiteVisit[]
+  deal             Deal?
+  tags             String[]
+  notes            String?
+  createdById      String?
+  createdBy        User?        @relation("CreatedByUser", fields: [createdById], references: [id])
+  firstResponseAt  DateTime?
+  lastContactAt    DateTime?
+  nextFollowUpAt   DateTime?
+  deletedAt        DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([phone])
+  @@index([email])
+  @@index([status])
+  @@index([score])
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([assignedBrokerId])
+}
+
+enum LeadSource {
+  META_ADS
+  GOOGLE_ADS
+  WEBSITE_FORM
+  INDIAMART
+  WHATSAPP_INBOUND
+  MANUAL
+  REFERRAL
+  WALK_IN
+  CHANNEL_PARTNER
+  REACTIVATION
+  OTHER
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  HOT
+  WARM
+  COLD
+  SITE_VISIT_SCHEDULED
+  SITE_VISIT_DONE
+  NEGOTIATION
+  BOOKED
+  CLOSED_WON
+  CLOSED_LOST
+  DEAD
+  DO_NOT_CONTACT
+}
+
+model Communication {
+  id            String        @id @default(uuid()) @map("_id")
+  leadId        String
+  lead          Lead          @relation(fields: [leadId], references: [id])
+  channel       CommChannel
+  direction     CommDirection
+  templateId    String?
+  content       String
+  mediaUrl      String?
+  status        CommStatus    @default(QUEUED)
+  sentAt        DateTime?
+  deliveredAt   DateTime?
+  readAt        DateTime?
+  repliedAt     DateTime?
+  failReason    String?
+  metadata      Json?
+  isAIGenerated Boolean       @default(false)
+  agentId       String?
+  createdAt     DateTime      @default(now())
+
+  @@index([leadId])
+  @@index([status])
+}
+
+enum CommChannel {
+  WHATSAPP
+  SMS
+  EMAIL
+  VOICE
+  IN_APP
+}
+
+enum CommDirection {
+  OUTBOUND
+  INBOUND
+}
+
+enum CommStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  REPLIED
+  FAILED
+  CANCELLED
+}
+
+model FollowUp {
+  id          String       @id @default(uuid()) @map("_id")
+  leadId      String
+  lead        Lead         @relation(fields: [leadId], references: [id])
+  sequenceDay Int
+  type        String
+  channel     CommChannel
+  status      FollowUpStatus @default(PENDING)
+  scheduledAt DateTime
+  executedAt  DateTime?
+  content     String?
+  result      String?
+  createdAt   DateTime     @default(now())
+
+  @@index([leadId])
+  @@index([scheduledAt])
+}
+
+enum FollowUpStatus {
+  PENDING
+  EXECUTED
+  SKIPPED
+  FAILED
+  CANCELLED
+}
+
+model SiteVisit {
+  id          String      @id @default(uuid()) @map("_id")
+  leadId      String
+  lead        Lead        @relation(fields: [leadId], references: [id])
+  projectId   String
+  scheduledAt DateTime
+  status      VisitStatus @default(SCHEDULED)
+  attendedAt  DateTime?
+  feedback    String?
+  brokerId    String?
+  createdAt   DateTime    @default(now())
+}
+
+enum VisitStatus {
+  SCHEDULED
+  CONFIRMED
+  ATTENDED
+  NO_SHOW
+  CANCELLED
+  RESCHEDULED
+}
+
+model Deal {
+  id         String     @id @default(uuid()) @map("_id")
+  leadId     String     @unique
+  lead       Lead       @relation(fields: [leadId], references: [id])
+  projectId  String
+  unitNumber String?
+  dealValue  Float
+  status     DealStatus @default(NEGOTIATION)
+  closedAt   DateTime?
+  notes      String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+enum DealStatus {
+  NEGOTIATION
+  BOOKING_DONE
+  AGREEMENT
+  REGISTRATION
+  CLOSED
+  CANCELLED
+}
+
+model Campaign {
+  id        String   @id @default(uuid()) @map("_id")
+  name      String
+  platform  String
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  adSpend   Float    @default(0)
+  leads     Lead[]
+  startDate DateTime?
+  endDate   DateTime?
+  status    String   @default("active")
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AutomationRule {
+  id              String       @id @default(uuid()) @map("_id")
+  name            String
+  description     String?
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  conditions      Json
+  actions         Json
+  isActive        Boolean      @default(true)
+  triggerCount    Int          @default(0)
+  lastTriggeredAt DateTime?
+  priority        Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model Activity {
+  id          String    @id @default(uuid()) @map("_id")
+  type        String
+  description String
+  leadId      String?
+  lead        Lead?     @relation(fields: [leadId], references: [id])
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id])
+  agentId     String?
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+
+  @@index([leadId])
+  @@index([userId])
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @map("_id")
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  body      String
+  type      String
+  isRead    Boolean  @default(false)
+  data      Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model ApiKey {
+  id             String       @id @default(uuid()) @map("_id")
+  name           String
+  key            String       @unique
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  permissions    String[]
+  isActive       Boolean      @default(true)
+  lastUsedAt     DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime     @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @map("_id")
+  action    String
+  entity    String
+  entityId  String
+  userId    String?
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([userId])
+}
+
+model WhatsAppTemplate {
+  id         String   @id @default(uuid()) @map("_id")
+  name       String
+  category   String
+  language   String   @default("en")
+  content    String
+  variables  String[]
+  status     String   @default("pending")
+  externalId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model AgentLog {
+  id         String   @id @default(uuid()) @map("_id")
+  agentType  String
+  action     String
+  leadId     String?
+  input      Json?
+  output     Json?
+  tokensUsed Int?
+  latencyMs  Int?
+  success    Boolean  @default(true)
+  error      String?
+  createdAt  DateTime @default(now())
+
+  @@index([agentType])
+  @@index([leadId])
+}
+
+model FutureFeature {
+  id          String   @id @default(uuid()) @map("_id")
+  key         String   @unique
+  name        String
+  status      String   @default("not_implemented")
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

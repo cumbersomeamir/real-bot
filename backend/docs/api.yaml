@@ -1,0 +1,21 @@
+openapi: 3.0.0
+info:
+  title: DealFlow AI API
+  version: 1.0.0
+servers:
+  - url: http://localhost:5001/api
+paths:
+  /auth/login:
+    post:
+      summary: Login
+  /leads:
+    get:
+      summary: List leads
+    post:
+      summary: Create lead
+  /analytics/overview:
+    get:
+      summary: Get analytics overview
+  /agents:
+    get:
+      summary: List agents
