@@ -15,6 +15,7 @@ export const metadata = generateMetadata({
 const modules = [
   {
     title: 'Lead Intake Engine',
+    ctaHref: '/leads',
     description:
       'Ingest every lead source in real time with deduplication, validation, attribution, and automated routing to projects.',
     features: [
@@ -29,6 +30,7 @@ const modules = [
   },
   {
     title: 'AI Qualification Engine',
+    ctaHref: '/ai-agents/qualification',
     description:
       'Automates first engagement and scoring so high-intent leads are prioritized immediately and consistently.',
     features: [
@@ -43,6 +45,7 @@ const modules = [
   },
   {
     title: 'Automated Follow-Up Engine',
+    ctaHref: '/communications',
     description:
       'Executes a proven multi-touch nurture cadence across channels with personalization and A/B testing.',
     features: [
@@ -56,6 +59,7 @@ const modules = [
   },
   {
     title: 'Broker Accountability System',
+    ctaHref: '/brokers',
     description:
       'Creates SLA-driven execution with transparent performance and anti-hoarding controls.',
     features: [
@@ -70,6 +74,7 @@ const modules = [
   },
   {
     title: 'Reactivation Engine',
+    ctaHref: '/ai-agents/reactivation',
     description:
       'Turns dormant databases into active pipeline through re-scoring, matching, and re-engagement.',
     features: [
@@ -83,6 +88,7 @@ const modules = [
   },
   {
     title: 'Revenue Intelligence Dashboard',
+    ctaHref: '/analytics',
     description:
       'Unifies acquisition, conversion, and sales execution metrics into one decision layer.',
     features: [
@@ -96,6 +102,7 @@ const modules = [
   },
   {
     title: 'Admin & Compliance Layer',
+    ctaHref: '/settings',
     description:
       'Governs access, integration security, auditability, and operational integrity at organization level.',
     features: [
@@ -122,10 +129,11 @@ export default function FeaturesPage() {
             title={module.title}
             description={module.description}
             features={module.features}
+            ctaHref={module.ctaHref}
           />
         ))}
         <ComparisonTable />
-        <ModuleShowcase />
+        <ModuleShowcase modules={modules} />
       </div>
     </div>
   );
