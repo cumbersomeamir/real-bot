@@ -4,6 +4,17 @@ const leadService = require('../services/leadService');
 const { scoreLead } = require('../services/scoringService');
 const { qualifyLead } = require('../services/qualificationService');
 
+function emitOrg(req, event, payload) {
+  try {
+    const io = req.app?.get('io');
+    const orgId = req.user?.organizationId;
+    if (!io || !orgId) return;
+    io.to(`org:${orgId}`).emit(event, payload);
+  } catch {
+    // no-op
+  }
+}
+
 async function list(req, res) {
   const page = Number(req.query.page || 1);
   const limit = Number(req.query.limit || 20);
@@ -20,13 +31,18 @@ async function getById(req, res) {
 async function create(req, res) {
   const lead = await leadService.createLead({
     ...req.body,
-    organizationId: req.body.organizationId || req.user.organizationId
+    organizationId: req.body.organizationId || req.user.organizationId,
+    createdById: req.user?.id || null
   });
+  emitOrg(req, 'lead:new', { id: lead.id, status: lead.status, assignedBrokerId: lead.assignedBrokerId || null });
+  emitOrg(req, 'kpi:update', { at: new Date().toISOString(), reason: 'lead:new' });
   return res.status(201).json(success(lead, 'Lead created'));
 }
 
 async function update(req, res) {
   const lead = await leadService.updateLead(req.params.id, req.body);
+  emitOrg(req, 'lead:updated', { id: lead.id, status: lead.status, assignedBrokerId: lead.assignedBrokerId || null });
+  emitOrg(req, 'kpi:update', { at: new Date().toISOString(), reason: 'lead:updated' });
   return res.json(success(lead, 'Lead updated'));
 }
 
@@ -41,16 +57,16 @@ async function importCSV(req, res) {
 
 async function assign(req, res) {
   const lead = await leadService.assignLead(req.params.id, req.body.brokerId);
+  emitOrg(req, 'lead:assigned', { id: lead.id, assignedBrokerId: lead.assignedBrokerId });
+  emitOrg(req, 'kpi:update', { at: new Date().toISOString(), reason: 'lead:assigned' });
   return res.json(success(lead, 'Lead assigned'));
 }
 
 async function qualify(req, res) {
-  const result = await qualifyLead(req.params.id);
-  await prisma.lead.update({
-    where: { id: req.params.id },
-    data: { isQualified: true, status: 'QUALIFIED', qualifiedAt: new Date() }
-  });
-  return res.json(success(result, 'Qualification triggered'));
+  const result = await qualifyLead(req.params.id, { actorUserId: req.user?.id });
+  emitOrg(req, 'lead:updated', { id: req.params.id, status: result.status });
+  emitOrg(req, 'kpi:update', { at: new Date().toISOString(), reason: 'lead:qualified' });
+  return res.json(success(result, 'Qualification completed'));
 }
 
 async function score(req, res) {
@@ -61,6 +77,8 @@ async function score(req, res) {
     where: { id: req.params.id },
     data: { score: score.score, scoreBreakdown: score.scoreBreakdown }
   });
+  emitOrg(req, 'lead:updated', { id: updated.id, score: updated.score });
+  emitOrg(req, 'kpi:update', { at: new Date().toISOString(), reason: 'lead:scored' });
   return res.json(success(updated, 'Lead scored'));
 }
 

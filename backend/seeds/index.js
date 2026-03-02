@@ -5,90 +5,94 @@ const { seedLeads } = require('./demoLeads');
 const { seedRules } = require('./rules');
 
 async function main() {
-  await prisma.agentLog.deleteMany();
-  await prisma.auditLog.deleteMany();
-  await prisma.notification.deleteMany();
-  await prisma.activity.deleteMany();
-  await prisma.communication.deleteMany();
-  await prisma.followUp.deleteMany();
-  await prisma.siteVisit.deleteMany();
-  await prisma.deal.deleteMany();
-  await prisma.lead.deleteMany();
-  await prisma.inventory.deleteMany();
-  await prisma.campaign.deleteMany();
-  await prisma.automationRule.deleteMany();
-  await prisma.apiKey.deleteMany();
-  await prisma.whatsAppTemplate.deleteMany();
-  await prisma.project.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.organization.deleteMany();
-
-  const organization = await prisma.organization.create({
-    data: {
-      name: 'DealFlow Demo Developers',
-      domain: 'dealflow.ai',
-      plan: 'GROWTH',
-      settings: {
-        timezone: 'Asia/Kolkata',
-        currency: 'INR'
+  let organization = await prisma.organization.findFirst({ where: { domain: 'dealflow.ai' } });
+  if (!organization) {
+    organization = await prisma.organization.create({
+      data: {
+        name: 'DealFlow Demo Developers',
+        domain: 'dealflow.ai',
+        plan: 'GROWTH',
+        settings: {
+          timezone: 'Asia/Kolkata',
+          currency: 'INR'
+        }
       }
-    }
-  });
+    });
+  }
 
   const users = await seedUsers(prisma, organization.id);
-  const projects = await seedProjects(prisma, organization.id);
-  const leads = await seedLeads(prisma, organization.id, users, projects);
-  await seedRules(prisma, organization.id);
 
-  for (let i = 0; i < 5; i += 1) {
-    await prisma.campaign.create({
-      data: {
-        name: `Campaign ${i + 1}`,
-        platform: i % 2 === 0 ? 'meta' : 'google',
-        projectId: projects[i % projects.length].id,
-        adSpend: 250000 + i * 100000,
-        status: 'active'
-      }
-    });
+  const existingProjects = await prisma.project.count({ where: { organizationId: organization.id } });
+  const projects = existingProjects ? await prisma.project.findMany({ where: { organizationId: organization.id } }) : await seedProjects(prisma, organization.id);
+
+  const existingLeads = await prisma.lead.count({ where: { organizationId: organization.id } });
+  const leads = existingLeads ? await prisma.lead.findMany({ where: { organizationId: organization.id }, take: 50 }) : await seedLeads(prisma, organization.id, users, projects);
+
+  const existingRules = await prisma.automationRule.count({ where: { organizationId: organization.id } });
+  if (!existingRules) await seedRules(prisma, organization.id);
+
+  const existingCampaigns = await prisma.campaign.count({ where: { project: { organizationId: organization.id } } });
+  if (!existingCampaigns) {
+    for (let i = 0; i < 5; i += 1) {
+      await prisma.campaign.create({
+        data: {
+          name: `Campaign ${i + 1}`,
+          platform: i % 2 === 0 ? 'meta' : 'google',
+          projectId: projects[i % projects.length].id,
+          adSpend: 250000 + i * 100000,
+          status: 'active'
+        }
+      });
+    }
   }
 
-  for (let i = 0; i < 100; i += 1) {
-    const lead = leads[i % leads.length];
-    await prisma.communication.create({
-      data: {
-        leadId: lead.id,
-        channel: i % 3 === 0 ? 'WHATSAPP' : i % 3 === 1 ? 'SMS' : 'EMAIL',
-        direction: i % 4 === 0 ? 'INBOUND' : 'OUTBOUND',
-        content: `Seed communication message ${i + 1}`,
-        status: i % 5 === 0 ? 'FAILED' : 'DELIVERED',
-        isAIGenerated: i % 2 === 0
-      }
-    });
+  const existingComms = await prisma.communication.count({ where: { lead: { organizationId: organization.id } } });
+  if (!existingComms) {
+    for (let i = 0; i < 100; i += 1) {
+      const lead = leads[i % leads.length];
+      await prisma.communication.create({
+        data: {
+          leadId: lead.id,
+          channel: i % 3 === 0 ? 'WHATSAPP' : i % 3 === 1 ? 'SMS' : 'EMAIL',
+          direction: i % 4 === 0 ? 'INBOUND' : 'OUTBOUND',
+          content: `Seed communication message ${i + 1}`,
+          status: i % 5 === 0 ? 'FAILED' : 'DELIVERED',
+          isAIGenerated: i % 2 === 0,
+          deliveredAt: i % 5 === 0 ? null : new Date()
+        }
+      });
+    }
   }
 
-  for (let i = 0; i < 20; i += 1) {
-    const lead = leads[i % leads.length];
-    await prisma.activity.create({
-      data: {
-        type: i % 2 === 0 ? 'status_change' : 'call',
-        description: `Seed activity ${i + 1}`,
-        leadId: lead.id,
-        userId: users[i % users.length].id
-      }
-    });
+  const existingActivities = await prisma.activity.count({ where: { lead: { organizationId: organization.id } } });
+  if (!existingActivities) {
+    for (let i = 0; i < 20; i += 1) {
+      const lead = leads[i % leads.length];
+      await prisma.activity.create({
+        data: {
+          type: i % 2 === 0 ? 'status_change' : 'call',
+          description: `Seed activity ${i + 1}`,
+          leadId: lead.id,
+          userId: users[i % users.length].id
+        }
+      });
+    }
   }
 
-  for (let i = 0; i < 3; i += 1) {
-    const lead = leads[i];
-    await prisma.deal.create({
-      data: {
-        leadId: lead.id,
-        projectId: projects[i % projects.length].id,
-        unitNumber: `A-${i + 1}`,
-        dealValue: 9500000 + i * 1500000,
-        status: i === 2 ? 'BOOKING_DONE' : 'NEGOTIATION'
-      }
-    });
+  const existingDeals = await prisma.deal.count({ where: { lead: { organizationId: organization.id } } });
+  if (!existingDeals && leads.length >= 3) {
+    for (let i = 0; i < 3; i += 1) {
+      const lead = leads[i];
+      await prisma.deal.create({
+        data: {
+          leadId: lead.id,
+          projectId: projects[i % projects.length].id,
+          unitNumber: `A-${i + 1}`,
+          dealValue: 9500000 + i * 1500000,
+          status: i === 2 ? 'BOOKING_DONE' : 'NEGOTIATION'
+        }
+      });
+    }
   }
 
   console.log('Seed complete');

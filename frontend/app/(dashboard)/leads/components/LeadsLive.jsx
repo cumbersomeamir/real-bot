@@ -5,15 +5,26 @@ import useSWR from 'swr';
 import api from '@/lib/api';
 import { Badge, Button, Card, Input, Select, Table } from '@/components/ui';
 import { notifyError, notifySuccess } from '@/components/ui/Toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useRealtime } from '@/hooks/useRealtime';
 
 const fetcher = (url) => api.get(url).then((res) => res.data?.data);
 
 export default function LeadsLive() {
+  const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [newLead, setNewLead] = useState({ name: '', phone: '', email: '' });
 
   const { data, mutate, isLoading } = useSWR('/leads', fetcher);
   const leads = data?.items || [];
+
+  useRealtime({
+    orgId: user?.organizationId,
+    userId: user?.id,
+    onEvent: (eventName) => {
+      if (eventName.startsWith('lead:')) mutate();
+    }
+  });
 
   const filtered = useMemo(() => {
     if (statusFilter === 'ALL') return leads;

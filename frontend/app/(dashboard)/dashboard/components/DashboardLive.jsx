@@ -4,12 +4,26 @@ import useSWR from 'swr';
 import api from '@/lib/api';
 import { Card, Skeleton } from '@/components/ui';
 import { formatINR } from '@/lib/formatters';
+import { useAuth } from '@/hooks/useAuth';
+import { useRealtime } from '@/hooks/useRealtime';
 
 const fetcher = (url) => api.get(url).then((res) => res.data?.data);
 
 export default function DashboardLive() {
-  const { data: overview, isLoading: loadingOverview } = useSWR('/analytics/overview', fetcher);
-  const { data: funnel, isLoading: loadingFunnel } = useSWR('/analytics/funnel', fetcher);
+  const { user } = useAuth();
+  const { data: overview, isLoading: loadingOverview, mutate: mutateOverview } = useSWR('/analytics/overview', fetcher);
+  const { data: funnel, isLoading: loadingFunnel, mutate: mutateFunnel } = useSWR('/analytics/funnel', fetcher);
+
+  useRealtime({
+    orgId: user?.organizationId,
+    userId: user?.id,
+    onEvent: (eventName) => {
+      if (eventName.startsWith('lead:') || eventName === 'kpi:update') {
+        mutateOverview();
+        mutateFunnel();
+      }
+    }
+  });
 
   if (loadingOverview || loadingFunnel) {
     return (

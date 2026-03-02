@@ -1,36 +1,45 @@
 const analyticsService = require('../services/analyticsService');
+const prisma = require('../config/database');
 const { success } = require('../utils/response');
 
-function overview(req, res) {
-  return res.json(success(analyticsService.getOverview()));
+async function overview(req, res) {
+  const data = await analyticsService.getOverview(prisma, req.user.organizationId);
+  return res.json(success(data));
 }
 
-function funnel(req, res) {
-  return res.json(success(analyticsService.getFunnel()));
+async function funnel(req, res) {
+  const data = await analyticsService.getFunnel(prisma, req.user.organizationId);
+  return res.json(success(data));
 }
 
-function revenue(req, res) {
-  return res.json(success(analyticsService.getRevenue()));
+async function revenue(req, res) {
+  const data = await analyticsService.getRevenue(prisma, req.user.organizationId);
+  return res.json(success(data));
 }
 
-function campaigns(req, res) {
-  return res.json(success(analyticsService.getCampaigns()));
+async function campaigns(req, res) {
+  const data = await analyticsService.getCampaigns(prisma, req.user.organizationId);
+  return res.json(success(data));
 }
 
-function sources(req, res) {
-  return res.json(success(analyticsService.getSources()));
+async function sources(req, res) {
+  const data = await analyticsService.getSources(prisma, req.user.organizationId);
+  return res.json(success(data));
 }
 
-function brokers(req, res) {
-  return res.json(success(analyticsService.getBrokers()));
+async function brokers(req, res) {
+  const data = await analyticsService.getBrokers(prisma, req.user.organizationId);
+  return res.json(success(data));
 }
 
-function forecast(req, res) {
-  return res.json(success(analyticsService.getForecast()));
+async function forecast(req, res) {
+  const data = await analyticsService.getForecast(prisma, req.user.organizationId);
+  return res.json(success(data));
 }
 
-function leakage(req, res) {
-  return res.json(success(analyticsService.getLeakage()));
+async function leakage(req, res) {
+  const data = await analyticsService.getLeakage(prisma, req.user.organizationId);
+  return res.json(success(data));
 }
 
 module.exports = {

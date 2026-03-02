@@ -1,11 +1,11 @@
 const express = require('express');
-const { success } = require('../utils/response');
+const webhookController = require('../controllers/webhookController');
 
 const router = express.Router();
 
-router.post('/meta', (req, res) => res.json(success({}, 'Meta webhook processed')));
-router.post('/google', (req, res) => res.json(success({}, 'Google webhook processed')));
-router.post('/whatsapp', (req, res) => res.json(success({}, 'WhatsApp webhook processed')));
-router.post('/indiamart', (req, res) => res.json(success({}, 'IndiaMART webhook processed')));
+router.post('/meta', webhookController.meta);
+router.post('/google', webhookController.google);
+router.post('/whatsapp', webhookController.whatsapp);
+router.post('/indiamart', webhookController.indiamart);
 
 module.exports = router;

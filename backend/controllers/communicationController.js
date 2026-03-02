@@ -25,7 +25,7 @@ async function createTemplate(req, res) {
 
 async function queue(req, res) {
   try {
-    const report = await communicationService.queueReport();
+    const report = await communicationService.queueReport(req.user.organizationId);
     return res.json(success(report));
   } catch (error) {
     return res.status(500).json(failure('SERVER_ERROR', error.message));
@@ -34,7 +34,7 @@ async function queue(req, res) {
 
 async function deliveryReport(req, res) {
   try {
-    const report = await communicationService.queueReport();
+    const report = await communicationService.queueReport(req.user.organizationId);
     return res.json(success(report));
   } catch (error) {
     return res.status(500).json(failure('SERVER_ERROR', error.message));
@@ -43,7 +43,22 @@ async function deliveryReport(req, res) {
 
 async function send(req, res) {
   try {
-    return res.json(success({ id: `msg-${Date.now()}`, status: 'QUEUED' }, 'Message queued'));
+    const { leadId, channel, content, templateId, variables, metadata } = req.body || {};
+    if (!leadId || !channel) {
+      return res.status(400).json(failure('VALIDATION_ERROR', 'leadId and channel are required'));
+    }
+
+    const comm = await communicationService.queueMessage({
+      organizationId: req.user.organizationId,
+      leadId,
+      channel,
+      content,
+      templateId,
+      variables,
+      metadata
+    });
+
+    return res.status(201).json(success(comm, 'Message queued'));
   } catch (error) {
     return res.status(500).json(failure('SERVER_ERROR', error.message));
   }

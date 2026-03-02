@@ -1,5 +1,6 @@
 const ruleEngineService = require('../services/ruleEngineService');
 const { success } = require('../utils/response');
+const prisma = require('../config/database');
 
 async function list(req, res) {
   const items = await ruleEngineService.listRules(req.user.organizationId);
@@ -22,11 +23,27 @@ async function remove(req, res) {
 }
 
 async function test(req, res) {
-  return res.json(success({ matched: true, actionsTriggered: ['assign_broker', 'send_template'] }, 'Rule test complete'));
+  const rule = await prisma.automationRule.findUnique({ where: { id: req.params.id } });
+  if (!rule) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Rule not found', details: [] } });
+
+  const leadId = req.body?.leadId || req.body?.id || null;
+  const lead = leadId ? await prisma.lead.findUnique({ where: { id: leadId } }) : null;
+  const matched = lead ? ruleEngineService.matchAll(lead, rule.conditions) : false;
+
+  const actions = Array.isArray(rule.actions) ? rule.actions : [];
+  const actionsTriggered = matched ? actions.map((a) => a?.type).filter(Boolean) : [];
+
+  return res.json(success({ matched, actionsTriggered, leadId: leadId || null }, 'Rule test complete'));
 }
 
 async function history(req, res) {
-  return res.json(success({ items: [{ at: new Date().toISOString(), result: 'success' }] }));
+  const raw = await prisma.activity.findMany({
+    where: { type: 'automation' },
+    take: 200,
+    orderBy: { createdAt: 'desc' }
+  });
+  const items = raw.filter((a) => a?.metadata?.ruleId === req.params.id).slice(0, 50);
+  return res.json(success({ items }));
 }
 
 module.exports = { list, create, update, remove, test, history };

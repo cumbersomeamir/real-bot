@@ -4,14 +4,30 @@ import useSWR from 'swr';
 import api from '@/lib/api';
 import { Card } from '@/components/ui';
 import { formatINR } from '@/lib/formatters';
+import { useAuth } from '@/hooks/useAuth';
+import { useRealtime } from '@/hooks/useRealtime';
 
 const fetcher = (url) => api.get(url).then((res) => res.data?.data);
 
 export default function AnalyticsLive() {
-  const { data: overview } = useSWR('/analytics/overview', fetcher);
-  const { data: campaigns } = useSWR('/analytics/campaigns', fetcher);
-  const { data: sources } = useSWR('/analytics/sources', fetcher);
-  const { data: forecast } = useSWR('/analytics/forecast', fetcher);
+  const { user } = useAuth();
+  const { data: overview, mutate: mutateOverview } = useSWR('/analytics/overview', fetcher);
+  const { data: campaigns, mutate: mutateCampaigns } = useSWR('/analytics/campaigns', fetcher);
+  const { data: sources, mutate: mutateSources } = useSWR('/analytics/sources', fetcher);
+  const { data: forecast, mutate: mutateForecast } = useSWR('/analytics/forecast', fetcher);
+
+  useRealtime({
+    orgId: user?.organizationId,
+    userId: user?.id,
+    onEvent: (eventName) => {
+      if (eventName.startsWith('lead:') || eventName === 'kpi:update') {
+        mutateOverview();
+        mutateCampaigns();
+        mutateSources();
+        mutateForecast();
+      }
+    }
+  });
 
   return (
     <div className="grid gap-4 md:grid-cols-2">

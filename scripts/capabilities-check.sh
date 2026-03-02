@@ -266,7 +266,7 @@ run() {
   call_success "POST" "/communications/templates" "{\"name\":\"capability_template_$RANDOM\",\"category\":\"marketing\",\"content\":\"Hello {{name}}\",\"variables\":[\"name\"]}" "200,201"
   call_success "GET" "/communications/queue"
   call_success "GET" "/communications/delivery-report"
-  call_success "POST" "/communications/send" "{\"leadId\":\"$new_lead_id\",\"channel\":\"WHATSAPP\",\"content\":\"Capability ping\"}"
+  call_success "POST" "/communications/send" "{\"leadId\":\"$new_lead_id\",\"channel\":\"WHATSAPP\",\"content\":\"Capability ping\"}" "200,201"
 
   log ""
   log "== Webhooks =="
@@ -287,31 +287,30 @@ run() {
   call_success "POST" "/api-keys" "{\"name\":\"capability-key-$RANDOM\",\"permissions\":[\"leads:read\"]}" "200,201"
 
   log ""
-  log "== Future Feature Stubs =="
+  log "== Future Features =="
+  call_success "GET" "/future/ai-chat-assistant"
+  call_success "POST" "/future/ai-chat-assistant" "{\"message\":\"Show me the top 3 hottest leads and what to do next\"}"
+
+  call_success "GET" "/future/webhook-builder"
+  call_success "POST" "/future/webhook-builder" "{\"action\":\"create\",\"name\":\"Capability Webhook\"}" "200,201"
+
+  call_success "GET" "/future/report-builder"
+  call_success "POST" "/future/report-builder" "{\"type\":\"kpis\"}"
+
+  for feature in \
+    multilanguage mobile-shell channel-partner-portal client-portal ai-price-optimization demand-heatmap \
+    ad-optimizer sell-through-predictor document-generation payment-tracking chatbot-builder api-marketplace; do
+    call_success "GET" "/future/$feature"
+    call_success "POST" "/future/$feature" "{}"
+  done
+
   for feature in \
     ai-chat-assistant webhook-builder report-builder multilanguage mobile-shell \
     channel-partner-portal client-portal ai-price-optimization demand-heatmap \
     ad-optimizer sell-through-predictor document-generation payment-tracking \
     chatbot-builder api-marketplace; do
-    call_not_implemented "GET" "/future/$feature"
-    call_not_implemented "POST" "/future/$feature" "{}"
+    call_success "GET" "/integrations/future/$feature"
   done
-
-  call_not_implemented "GET" "/integrations/future/ai-chat-assistant"
-  call_not_implemented "GET" "/integrations/future/webhook-builder"
-  call_not_implemented "GET" "/integrations/future/report-builder"
-  call_not_implemented "GET" "/integrations/future/multilanguage"
-  call_not_implemented "GET" "/integrations/future/mobile-shell"
-  call_not_implemented "GET" "/integrations/future/channel-partner-portal"
-  call_not_implemented "GET" "/integrations/future/client-portal"
-  call_not_implemented "GET" "/integrations/future/ai-price-optimization"
-  call_not_implemented "GET" "/integrations/future/demand-heatmap"
-  call_not_implemented "GET" "/integrations/future/ad-optimizer"
-  call_not_implemented "GET" "/integrations/future/sell-through-predictor"
-  call_not_implemented "GET" "/integrations/future/document-generation"
-  call_not_implemented "GET" "/integrations/future/payment-tracking"
-  call_not_implemented "GET" "/integrations/future/chatbot-builder"
-  call_not_implemented "GET" "/integrations/future/api-marketplace"
 
   log ""
   log "== Cleanup =="

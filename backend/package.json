@@ -4,8 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "nodemon server.js",
+    "workers": "node queues/workers/index.js",
+    "dev:all": "concurrently -k -n api,workers -c cyan,magenta \"nodemon server.js\" \"node queues/workers/index.js\"",
     "start": "node server.js",
     "migrate": "prisma db push --schema ./models/prisma/schema.prisma",
+    "setup": "npm run migrate && npm run seed",
     "seed": "node seeds/index.js",
     "test": "jest"
   },
@@ -39,6 +42,7 @@
     "crypto-js": "^4.2.0"
   },
   "devDependencies": {
+    "concurrently": "^9.0.0",
     "nodemon": "^3.0.2",
     "jest": "^29.7.0",
     "supertest": "^6.3.3"

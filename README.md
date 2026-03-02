@@ -45,22 +45,32 @@ cp backend/.env.example backend/.env
 ```
 
 ### 3. Start Redis
+Run Redis + MongoDB locally (recommended via Docker):
 
-Run Redis locally (for example with Homebrew service or your preferred method).
+```bash
+cd /Users/rajeevkumar/Downloads/real-bot
+docker compose up -d
+```
 
 ### 4. Push schema and seed
 
+MongoDB note: Prisma with MongoDB requires a **replica set** (MongoDB Atlas works out of the box; for local dev you can start a local single-node replica set).
+
+```bash
+chmod +x ./scripts/mongo-replset-start.sh
+./scripts/mongo-replset-start.sh
+```
+
 ```bash
 cd backend
-npx prisma db push --schema ./models/prisma/schema.prisma
-node seeds/index.js
+npm run setup
 ```
 
 ### 5. Run apps
 
 ```bash
 # Terminal 1
-cd backend && npm run dev
+cd backend && npm run dev:all
 
 # Terminal 2
 cd frontend && npm run dev

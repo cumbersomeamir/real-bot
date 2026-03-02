@@ -20,22 +20,27 @@ async function leads(req, res) {
 }
 
 async function performance(req, res) {
-  return res.json(success({
-    responseTime: '4m 12s',
-    conversionRate: 12.5,
-    firstCallRate: 83,
-    monthlyClosures: 7
-  }));
+  const metrics = await brokerService.brokerMetrics(req.params.id, req.user.organizationId);
+  return res.json(success(metrics));
 }
 
 async function leaderboard(req, res) {
-  return res.json(success({
-    items: [
-      { rank: 1, broker: 'Aman Shah', score: 94 },
-      { rank: 2, broker: 'Ritu Singh', score: 89 },
-      { rank: 3, broker: 'Karan Rao', score: 81 }
-    ]
-  }));
+  const orgId = req.user.organizationId;
+  const brokers = await brokerService.listBrokers(orgId);
+
+  // Score: blend conversion + responsiveness + closures
+  const scored = brokers.map((b) => {
+    const conv = Number(String(b.conversionRate).replace('%', '')) || 0;
+    const closures = b.monthClosures || 0;
+    const resp = b.responseTime || '-';
+    const respScore = resp === '-' ? 40 : Math.max(10, 100 - (parseInt(resp, 10) || 0) * 3);
+    const score = Math.round(conv * 4 + closures * 6 + respScore * 0.3);
+    return { broker: b.name, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  const items = scored.slice(0, 10).map((s, idx) => ({ rank: idx + 1, broker: s.broker, score: s.score }));
+  return res.json(success({ items }));
 }
 
 module.exports = {

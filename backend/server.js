@@ -3,6 +3,7 @@ const { Server } = require('socket.io');
 const app = require('./app');
 const env = require('./config/env');
 const logger = require('./config/logger');
+const { startPollingScheduler } = require('./scheduler');
 
 const server = http.createServer(app);
 
@@ -19,6 +20,8 @@ io.on('connection', (socket) => {
 });
 
 app.set('io', io);
+
+startPollingScheduler();
 
 server.listen(env.PORT, () => {
   logger.info(`DealFlow API listening on port ${env.PORT}`);
